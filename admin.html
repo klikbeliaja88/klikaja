@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Klik Aja</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { brand: { blue: '#0056D2', light: '#E6F0FA', dark: '#0A2540' } } } }
+        }
+    </script>
+    <!-- Konfigurasi backend: samakan dengan API_URL di index.html -->
+    <script>
+        window.KLIKAJA_CONFIG = {
+            API_URL: "https://script.google.com/macros/s/AKfycbw8-Pu162L0kAfkPQc6S-m83qozoBQjRF58utKTo0kesLIbfXrIjf0B1gVBc1sgq3o/exec"
+        };
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tab-btn.active { background:#0056D2; color:#fff; }
+        .status-pill { padding:2px 10px; border-radius:9999px; font-size:11px; font-weight:600; }
+    </style>
+</head>
+<body class="bg-gray-50 text-slate-700 antialiased min-h-screen">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
+        <div class="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+            <div class="flex flex-col items-center mb-6">
+                <div class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-brand-blue text-2xl mb-3">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <h1 class="text-xl font-bold text-brand-dark">Admin Klik Aja</h1>
+                <p class="text-sm text-gray-500">Masuk untuk mengelola toko</p>
+            </div>
+            <div class="space-y-3">
+                <input id="login-username" type="text" placeholder="Username" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-blue">
+                <input id="login-password" type="password" placeholder="Password" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-brand-blue">
+                <button id="login-btn" onclick="doLogin()" class="w-full bg-brand-blue hover:bg-blue-700 text-white font-semibold rounded-lg py-2.5 text-sm transition-colors">Masuk</button>
+                <p id="login-error" class="text-red-500 text-xs text-center hidden"></p>
+            </div>
+            <a href="index.html" class="block text-center text-xs text-gray-400 mt-6 hover:text-brand-blue">&larr; Kembali ke toko</a>
+        </div>
+    </div>
+
+    <!-- DASHBOARD (hidden until login) -->
+    <div id="dashboard" class="hidden">
+        <header class="bg-white border-b border-gray-100 sticky top-0 z-20">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-bag-shopping text-brand-blue text-xl"></i>
+                    <span class="font-bold text-brand-dark">Klik Aja <span class="font-normal text-gray-400">/ Admin</span></span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="welcome-user" class="text-sm text-gray-500 hidden sm:block"></span>
+                    <button onclick="doLogout()" class="text-sm text-red-500 hover:text-red-600 flex items-center gap-1">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Keluar
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+            <!-- Stat cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                    <div class="text-xs text-gray-500 mb-1">Total Produk</div>
+                    <div id="stat-products" class="text-2xl font-bold text-brand-dark">-</div>
+                </div>
+                <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                    <div class="text-xs text-gray-500 mb-1">Total Pesanan</div>
+                    <div id="stat-orders" class="text-2xl font-bold text-brand-dark">-</div>
+                </div>
+                <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                    <div class="text-xs text-gray-500 mb-1">Pesanan Pending</div>
+                    <div id="stat-pending" class="text-2xl font-bold text-orange-500">-</div>
+                </div>
+                <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                    <div class="text-xs text-gray-500 mb-1">Total Pendapatan (Paid)</div>
+                    <div id="stat-revenue" class="text-2xl font-bold text-green-600">-</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex gap-2 mb-6">
+                <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-semibold bg-gray-100" data-tab="produk" onclick="switchTab('produk')">
+                    <i class="fa-solid fa-box-archive mr-1"></i> Produk
+                </button>
+                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-gray-100" data-tab="pesanan" onclick="switchTab('pesanan')">
+                    <i class="fa-solid fa-cart-shopping mr-1"></i> Pesanan
+                </button>
+                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-gray-100" data-tab="akun" onclick="switchTab('akun')">
+                    <i class="fa-solid fa-gear mr-1"></i> Akun
+                </button>
+            </div>
+
+            <!-- TAB: PRODUK -->
+            <section id="tab-produk">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-bold text-brand-dark">Daftar Produk</h2>
+                    <button onclick="openProductForm()" class="bg-brand-blue text-white text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Tambah Produk
+                    </button>
+                </div>
+                <div class="bg-white border border-gray-100 rounded-xl shadow-sm overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                            <tr>
+                                <th class="text-left px-4 py-3">Produk</th>
+                                <th class="text-left px-4 py-3">Kategori</th>
+                                <th class="text-left px-4 py-3">Harga</th>
+                                <th class="text-left px-4 py-3">Status</th>
+                                <th class="text-right px-4 py-3">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table-body"></tbody>
+                    </table>
+                    <div id="products-empty" class="hidden text-center py-10 text-gray-400 text-sm">Belum ada produk.</div>
+                </div>
+            </section>
+
+            <!-- TAB: PESANAN -->
+            <section id="tab-pesanan" class="hidden">
+                <h2 class="font-bold text-brand-dark mb-4">Daftar Pesanan</h2>
+                <div class="bg-white border border-gray-100 rounded-xl shadow-sm overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                            <tr>
+                                <th class="text-left px-4 py-3">ID</th>
+                                <th class="text-left px-4 py-3">Pelanggan</th>
+                                <th class="text-left px-4 py-3">Item</th>
+                                <th class="text-left px-4 py-3">Total</th>
+                                <th class="text-left px-4 py-3">Status</th>
+                                <th class="text-right px-4 py-3">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-table-body"></tbody>
+                    </table>
+                    <div id="orders-empty" class="hidden text-center py-10 text-gray-400 text-sm">Belum ada pesanan.</div>
+                </div>
+            </section>
+
+            <!-- TAB: AKUN -->
+            <section id="tab-akun" class="hidden">
+                <div class="bg-white border border-gray-100 rounded-xl shadow-sm p-6 max-w-md">
+                    <h2 class="font-bold text-brand-dark mb-1">Ganti Password</h2>
+                    <p class="text-xs text-gray-500 mb-4">Gunakan password yang kuat dan segera ganti password default.</p>
+                    <input id="new-password" type="password" placeholder="Password baru (min. 6 karakter)" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm mb-3 focus:outline-none focus:border-brand-blue">
+                    <button onclick="changePassword()" class="bg-brand-blue text-white text-sm font-semibold px-4 py-2 rounded-lg">Simpan Password</button>
+                    <p id="password-msg" class="text-xs mt-3 hidden"></p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- PRODUCT FORM MODAL -->
+    <div id="product-modal" class="fixed inset-0 bg-gray-900/50 z-50 hidden items-center justify-center px-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="product-modal-title" class="font-bold text-brand-dark">Tambah Produk</h3>
+                <button onclick="closeProductForm()" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3">
+                <input type="hidden" id="product-id">
+                <div>
+                    <label class="text-xs font-semibold text-gray-500">Judul Produk</label>
+                    <input id="product-title" type="text" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:border-brand-blue">
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-500">Kategori</label>
+                    <input id="product-category" type="text" placeholder="mis. Template Excel" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:border-brand-blue">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-500">Harga (Rp)</label>
+                        <input id="product-price" type="number" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:border-brand-blue">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-500">Status</label>
+                        <select id="product-status" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:border-brand-blue">
+                            <option value="active">Aktif (tampil di toko)</option>
+                            <option value="inactive">Nonaktif (disembunyikan)</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-500">URL Gambar</label>
+                    <input id="product-image" type="text" placeholder="https://..." class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:border-brand-blue">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-500">Teks Badge (opsional)</label>
+                        <input id="product-badge" type="text" placeholder="mis. TERLARIS" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:border-brand-blue">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-500">Rating</label>
+                        <input id="product-rating" type="number" step="0.1" min="0" max="5" value="5" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:border-brand-blue">
+                    </div>
+                </div>
+                <button onclick="saveProduct()" class="w-full bg-brand-blue hover:bg-blue-700 text-white font-semibold rounded-lg py-2.5 text-sm mt-2">Simpan Produk</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed bottom-5 right-5 z-[80] transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-white border border-gray-100 shadow-xl rounded-xl p-4 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 text-brand-blue">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <p id="toast-msg" class="text-sm text-brand-dark font-medium"></p>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = window.KLIKAJA_CONFIG || {};
+        let TOKEN = null;
+        let allProducts = [];
+        let allOrders = [];
+
+        function apiConfigured() {
+            return CONFIG.API_URL && CONFIG.API_URL.indexOf('GANTI_DENGAN') !== 0;
+        }
+
+        async function apiPost(action, payload) {
+            if (!apiConfigured()) throw new Error('API_URL belum dikonfigurasi di admin.html.');
+            const res = await fetch(CONFIG.API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(Object.assign({ action, token: TOKEN }, payload))
+            });
+            return res.json();
+        }
+
+        async function apiGet(action, extraQuery) {
+            if (!apiConfigured()) throw new Error('API_URL belum dikonfigurasi di admin.html.');
+            const url = `${CONFIG.API_URL}?action=${action}&token=${encodeURIComponent(TOKEN || '')}${extraQuery || ''}`;
+            const res = await fetch(url);
+            return res.json();
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            clearTimeout(window.__toastTimeout);
+            window.__toastTimeout = setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        const formatRupiah = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n || 0);
+
+        // ---------- LOGIN ----------
+        window.doLogin = async () => {
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errEl = document.getElementById('login-error');
+            errEl.classList.add('hidden');
+            if (!apiConfigured()) {
+                errEl.innerText = 'API_URL belum dikonfigurasi. Lihat PANDUAN-SETUP.md.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true;
+            btn.innerText = 'Memproses...';
+            try {
+                const res = await fetch(CONFIG.API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'login', username, password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    TOKEN = data.token;
+                    document.getElementById('welcome-user').innerText = `Halo, ${data.username}`;
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('dashboard').classList.remove('hidden');
+                    loadAll();
+                } else {
+                    errEl.innerText = data.message || 'Login gagal.';
+                    errEl.classList.remove('hidden');
+                }
+            } catch (err) {
+                errEl.innerText = 'Tidak bisa menghubungi backend: ' + err.message;
+                errEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Masuk';
+            }
+        };
+
+        window.doLogout = async () => {
+            try { await apiPost('logout', {}); } catch (e) {}
+            TOKEN = null;
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+        };
+
+        // ---------- TABS ----------
+        window.switchTab = (tab) => {
+            ['produk', 'pesanan', 'akun'].forEach(t => {
+                document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
+                document.querySelector(`.tab-btn[data-tab="${t}"]`).classList.toggle('active', t === tab);
+            });
+        };
+
+        // ---------- LOAD DATA ----------
+        async function loadAll() {
+            await Promise.all([loadProducts(), loadOrders()]);
+            updateStats();
+        }
+
+        async function loadProducts() {
+            try {
+                const data = await apiGet('getProducts');
+                if (data.success) { allProducts = data.products; renderProductsTable(); }
+                else showToast(data.message || 'Gagal memuat produk.');
+            } catch (err) { showToast(err.message); }
+        }
+
+        async function loadOrders() {
+            try {
+                const data = await apiGet('getOrders');
+                if (data.success) { allOrders = data.orders; renderOrdersTable(); }
+                else showToast(data.message || 'Gagal memuat pesanan.');
+            } catch (err) { showToast(err.message); }
+        }
+
+        function updateStats() {
+            document.getElementById('stat-products').innerText = allProducts.length;
+            document.getElementById('stat-orders').innerText = allOrders.length;
+            document.getElementById('stat-pending').innerText = allOrders.filter(o => o.status === 'pending').length;
+            const revenue = allOrders.filter(o => o.status === 'paid' || o.status === 'completed')
+                .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+            document.getElementById('stat-revenue').innerText = formatRupiah(revenue);
+        }
+
+        // ---------- PRODUCTS TABLE ----------
+        function renderProductsTable() {
+            const body = document.getElementById('products-table-body');
+            const empty = document.getElementById('products-empty');
+            body.innerHTML = '';
+            empty.classList.toggle('hidden', allProducts.length > 0);
+            allProducts.forEach(p => {
+                const isActive = (p.status || 'active') !== 'inactive';
+                body.insertAdjacentHTML('beforeend', `
+                    <tr class="border-t border-gray-100">
+                        <td class="px-4 py-3 font-medium text-brand-dark">${escapeHtml(p.title)}</td>
+                        <td class="px-4 py-3 text-gray-500">${escapeHtml(p.category || '-')}</td>
+                        <td class="px-4 py-3">${formatRupiah(p.price)}</td>
+                        <td class="px-4 py-3">
+                            <span class="status-pill ${isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">${isActive ? 'Aktif' : 'Nonaktif'}</span>
+                        </td>
+                        <td class="px-4 py-3 text-right whitespace-nowrap">
+                            <button onclick='openProductForm(${JSON.stringify(p)})' class="text-brand-blue hover:underline text-xs font-semibold mr-3">Edit</button>
+                            <button onclick="deleteProduct('${p.id}')" class="text-red-500 hover:underline text-xs font-semibold">Hapus</button>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        window.openProductForm = (product) => {
+            document.getElementById('product-modal-title').innerText = product ? 'Edit Produk' : 'Tambah Produk';
+            document.getElementById('product-id').value = product ? product.id : '';
+            document.getElementById('product-title').value = product ? product.title : '';
+            document.getElementById('product-category').value = product ? product.category : '';
+            document.getElementById('product-price').value = product ? product.price : '';
+            document.getElementById('product-status').value = product ? (product.status || 'active') : 'active';
+            document.getElementById('product-image').value = product ? product.image : '';
+            document.getElementById('product-badge').value = product ? product.badgeText : '';
+            document.getElementById('product-rating').value = product ? (product.rating || 5) : 5;
+            document.getElementById('product-modal').classList.remove('hidden');
+            document.getElementById('product-modal').classList.add('flex');
+        };
+
+        window.closeProductForm = () => {
+            document.getElementById('product-modal').classList.add('hidden');
+            document.getElementById('product-modal').classList.remove('flex');
+        };
+
+        window.saveProduct = async () => {
+            const id = document.getElementById('product-id').value;
+            const product = {
+                id: id || undefined,
+                title: document.getElementById('product-title').value.trim(),
+                category: document.getElementById('product-category').value.trim(),
+                price: Number(document.getElementById('product-price').value) || 0,
+                status: document.getElementById('product-status').value,
+                image: document.getElementById('product-image').value.trim(),
+                badgeText: document.getElementById('product-badge').value.trim(),
+                badgeColor: 'bg-brand-blue',
+                rating: Number(document.getElementById('product-rating').value) || 5
+            };
+            if (!product.title || !product.price) { showToast('Judul dan harga wajib diisi.'); return; }
+            try {
+                const data = id
+                    ? await apiPost('updateProduct', { product })
+                    : await apiPost('addProduct', { product });
+                if (data.success) {
+                    showToast('Produk tersimpan.');
+                    closeProductForm();
+                    loadProducts();
+                } else {
+                    showToast(data.message || 'Gagal menyimpan produk.');
+                }
+            } catch (err) { showToast(err.message); }
+        };
+
+        window.deleteProduct = async (id) => {
+            if (!confirm('Hapus produk ini?')) return;
+            try {
+                const data = await apiPost('deleteProduct', { id });
+                if (data.success) { showToast('Produk dihapus.'); loadProducts(); }
+                else showToast(data.message || 'Gagal menghapus produk.');
+            } catch (err) { showToast(err.message); }
+        };
+
+        // ---------- ORDERS TABLE ----------
+        const STATUS_OPTIONS = ['pending', 'paid', 'completed', 'cancelled'];
+        const STATUS_LABEL = { pending: 'Menunggu', paid: 'Dibayar', completed: 'Selesai', cancelled: 'Dibatalkan' };
+
+        function renderOrdersTable() {
+            const body = document.getElementById('orders-table-body');
+            const empty = document.getElementById('orders-empty');
+            body.innerHTML = '';
+            empty.classList.toggle('hidden', allOrders.length > 0);
+            allOrders.forEach(o => {
+                const itemNames = (o.items || []).map(i => i.title).join(', ');
+                const options = STATUS_OPTIONS.map(s => `<option value="${s}" ${o.status === s ? 'selected' : ''}>${STATUS_LABEL[s]}</option>`).join('');
+                body.insertAdjacentHTML('beforeend', `
+                    <tr class="border-t border-gray-100">
+                        <td class="px-4 py-3 font-mono text-xs text-gray-500">${o.id}</td>
+                        <td class="px-4 py-3">
+                            <div class="font-medium text-brand-dark">${escapeHtml(o.customerName || '-')}</div>
+                            <div class="text-xs text-gray-400">${escapeHtml(o.customerPhone || '-')}</div>
+                        </td>
+                        <td class="px-4 py-3 text-gray-500 max-w-[220px] truncate" title="${escapeHtml(itemNames)}">${escapeHtml(itemNames)}</td>
+                        <td class="px-4 py-3 font-semibold">${formatRupiah(o.total)}</td>
+                        <td class="px-4 py-3">
+                            <select onchange="updateOrderStatus('${o.id}', this.value)" class="border border-gray-200 rounded-lg text-xs px-2 py-1">
+                                ${options}
+                            </select>
+                        </td>
+                        <td class="px-4 py-3 text-right text-xs text-gray-400">${o.date ? new Date(o.date).toLocaleDateString('id-ID') : '-'}</td>
+                    </tr>
+                `);
+            });
+        }
+
+        window.updateOrderStatus = async (orderId, status) => {
+            try {
+                const data = await apiPost('updateOrderStatus', { orderId, status });
+                if (data.success) { showToast('Status pesanan diperbarui.'); loadOrders().then(updateStats); }
+                else showToast(data.message || 'Gagal memperbarui status.');
+            } catch (err) { showToast(err.message); }
+        };
+
+        // ---------- ACCOUNT ----------
+        window.changePassword = async () => {
+            const newPassword = document.getElementById('new-password').value;
+            const msg = document.getElementById('password-msg');
+            try {
+                const data = await apiPost('changePassword', { newPassword });
+                msg.classList.remove('hidden');
+                if (data.success) {
+                    msg.className = 'text-xs mt-3 text-green-600';
+                    msg.innerText = 'Password berhasil diganti.';
+                    document.getElementById('new-password').value = '';
+                } else {
+                    msg.className = 'text-xs mt-3 text-red-500';
+                    msg.innerText = data.message || 'Gagal mengganti password.';
+                }
+            } catch (err) {
+                msg.classList.remove('hidden');
+                msg.className = 'text-xs mt-3 text-red-500';
+                msg.innerText = err.message;
+            }
+        };
+
+        function escapeHtml(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
